@@ -1,6 +1,6 @@
 import json
 import boto3
-import requests
+from botocore.vendored import requests
 import os
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
