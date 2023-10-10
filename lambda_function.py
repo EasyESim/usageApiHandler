@@ -1,6 +1,6 @@
 import json
 import boto3
-from botocore.vendored import requests
+import urllib3
 import os
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
@@ -8,7 +8,8 @@ from botocore.exceptions import ClientError
 def lambda_handler(event, context):
     try:
         auth_key = os.environ['ESIM_GO_AUTH_KEY']
-        request = event['detail']['payload']
+        request = json.loads(event['body'])
+        print(request)
         customer_id_to_match = request['customer_id']
         dynamodb = boto3.resource('dynamodb')
         customer_table = dynamodb.Table('customer')
@@ -52,20 +53,39 @@ def lambda_handler(event, context):
                         headers = {"X-API-Key": auth_key}
                         
                         try:
-                            r = requests.get(url, data=payload, headers=headers)
-                            r.raise_for_status()  # Raise an exception for HTTP errors
+                            http = urllib3.PoolManager()
+                            r = http.request('GET', url, fields=payload, headers=headers)
                             
-                            if(r.status_code == 200):
-                                data = json.loads(r.text)
+                            if(r.status == 200):
+                                data = json.loads(r.data.decode('utf-8'))
                                 esim_data = data['bundles'][0]
                                 esim_data['qr_code'] = 'https://esim-qrcode.s3.eu-west-2.amazonaws.com/'+iccid+'.png'
                                 esim_details.append(esim_data)
                                 print(esim_details)
-                        except requests.exceptions.RequestException as e:
-                            print(f"An error occurred while making the API request: {str(e)}")
+                            else:
+                                print(f"HTTP Error: {r.status}")
+                        except urllib3.exceptions.HTTPError as e:
+                            print(f"HTTP Error occurred while making the API request: {str(e)}")
+                        except urllib3.exceptions.RequestError as e:
+                            print(f"Request Error occurred while making the API request: {str(e)}")
 
-        return esim_details
+        # Return the response as a dictionary
+        response_body = json.dumps({"data": esim_details})
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": response_body
+        }
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
-        return {"error": str(e)}
+        error_response_body = json.dumps({"error": str(e)})
+        return {
+            "statusCode": 500,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": error_response_body
+        }
