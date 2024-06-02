@@ -1,35 +1,95 @@
-name: Build Lambda
+name: Build and Test Lambda
+
 on: [pull_request]
+
 jobs:
-  build-source:
-    name: Build
+  build-and-test:
+    name: Build and Test
     strategy:
       matrix:
         python-version: [3.10.12]
         aws_region: [eu-west-2]
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Set up Python ${{ matrix.python-version }}
+
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
+          python -m venv venv
+          source venv/bin/activate
           python -m pip install --upgrade pip
-          pip install ruff pytest
+          pip install ruff pytest moto
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         env:
           CI: true
+
+      - name: Run tests
+        run: |
+          source venv/bin/activate
+          pytest
+        env:
+          CI: true
+
       - name: Bundle
         uses: montudor/action-zip@v1.0.0
         with:
           args: zip -qq -r ./bundle.zip ./
+
       - name: Archive Bundle
         uses: actions/upload-artifact@v3.1.2
         with:
           name: bundle
           path: bundle.zip
           retention-days: 1
+
+  deploy:
+    name: Deploy to AWS Lambda
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10.12
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        env:
+          CI: true
+
+      - name: Deploy to AWS Lambda
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ matrix.aws_region }}
+        run: |
+          zip -r lambda_function.zip src/ > /dev/null
+          aws lambda update-function-code --function-name myLambdaFunction --zip-file fileb://lambda_function.zip --region $AWS_REGION
