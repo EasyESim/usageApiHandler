@@ -9,9 +9,9 @@ from src.lambda_function import lambda_handler
 class TestLambdaHandler(unittest.TestCase):
 
     @patch.dict(os.environ, {'ESIM_GO_AUTH_KEY': 'test_auth_key'})
-    @patch('src.lambda_handler.boto3.resource')
-    @patch('src.lambda_handler.boto3.client')
-    @patch('src.lambda_handler.urllib3.PoolManager')
+    @patch('src.lambda_function.boto3.resource')
+    @patch('src.lambda_function.boto3.client')
+    @patch('src.lambda_function.urllib3.PoolManager')
     def test_lambda_handler_success(self, mock_pool_manager, mock_boto3_client, mock_boto3_resource):
         # Mocking DynamoDB table responses
         mock_dynamo_table = MagicMock()
@@ -46,9 +46,9 @@ class TestLambdaHandler(unittest.TestCase):
         self.assertIn('data', json.loads(response['body']))
 
     @patch.dict(os.environ, {'ESIM_GO_AUTH_KEY': 'test_auth_key'})
-    @patch('src.lambda_handler.boto3.resource')
-    @patch('src.lambda_handler.boto3.client')
-    @patch('src.lambda_handler.urllib3.PoolManager')
+    @patch('src.lambda_function.boto3.resource')
+    @patch('src.lambda_function.boto3.client')
+    @patch('src.lambda_function.urllib3.PoolManager')
     def test_lambda_handler_http_error(self, mock_pool_manager, mock_boto3_client, mock_boto3_resource):
         # Mocking DynamoDB table responses
         mock_dynamo_table = MagicMock()
