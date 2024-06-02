@@ -1,3 +1,4 @@
+import os
 import json
 import boto3
 import urllib3
@@ -11,6 +12,7 @@ def lambda_handler(event, context):
 
         request = json.loads(event['body'])
         print(request)
+        auth_key = os.environ['ESIM_GO_AUTH_KEY']
         customer_id_to_match = request['customer_id']
         dynamodb = boto3.resource('dynamodb')
         customer_table = dynamodb.Table('customer')
