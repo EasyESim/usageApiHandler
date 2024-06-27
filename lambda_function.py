@@ -51,7 +51,7 @@ def lambda_handler(event, context):
                         if flag_image_url:
                             esim['flag_image_url'] = flag_image_url
                         print(esim['iccid'])
-                        url = "https://api.esim-go.com/v2.2/esims/"+iccid+"/bundles"
+                        url = "https://api.esim-go.com/v2.3/esims/"+iccid+"/bundles"
                         payload = {}
                         headers = {"X-API-Key": auth_key}
                         
@@ -61,7 +61,6 @@ def lambda_handler(event, context):
                             
                             if(r.status == 200):
                                 data = json.loads(r.data.decode('utf-8'))
-                                print("ddd")
                                 print(data)
                                 # Check if the 'bundles' list is empty
                                 if 'bundles' in data and len(data['bundles']) > 0:
