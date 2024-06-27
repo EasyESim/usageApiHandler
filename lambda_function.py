@@ -64,7 +64,6 @@ def lambda_handler(event, context):
 
                             if (r.status == 200):
                                 data = json.loads(r.data.decode('utf-8'))
-                                print("ddd")
                                 print(data)
                                 # Check if the 'bundles' list is empty
                                 if 'bundles' in data and len(data['bundles']) > 0:
